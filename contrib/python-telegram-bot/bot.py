@@ -1,12 +1,35 @@
-import telegram
-from telegram.ext import Updater, CommandHandler
+import openai
+import asyncio
+import os
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
 
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Привет! Я бот")
+# инициализация API OpenAI
+openai.api_key = os.environ.get('OPENAI_API_KEY')
 
-updater = Updater(token='6189637119:AAFQ-aByjvgEKM7uass1oo629-dMIPS6WRA', use_context=True)
-dispatcher = updater.dispatcher
-start_handler = CommandHandler('start', start)
-dispatcher.add_handler(start_handler)
+# инициализация бота
+bot = Bot(token=os.environ.get('BOT_TOKEN'))
+dp = Dispatcher(bot)
 
-updater.start_polling()
+# функция, которая будет вызвана при команде /start
+@dp.message_handler(commands=['start'])
+async def start_command(message: types.Message):
+    await message.reply("Привет! Я телеграмм бот.")
+
+# функция, которая будет вызвана при любом сообщении
+@dp.message_handler()
+async def echo_message(message: types.Message):
+    # получаем ответ от OpenAI API
+    response = openai.Completion.create(
+        engine="davinci", prompt=message.text, max_tokens=100
+    )
+
+    # отправляем ответ от OpenAI API пользователю
+    await message.reply(response.choices[0].text)
+
+# функция для запуска бота
+def main():
+    executor.start_polling(dp, skip_updates=True)
+
+if __name__ == '__main__':
+    main()
